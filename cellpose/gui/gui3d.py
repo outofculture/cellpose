@@ -122,6 +122,8 @@ class MainW_3d(MainW):
         # MainW init
         MainW.__init__(self, image=image, logger=logger)
 
+        self._deleting = False
+
         # add gradZ view
         self.ViewDropDown.insertItem(3, "gradZ")
 
@@ -220,6 +222,21 @@ class MainW_3d(MainW):
             io._load_image(self, self.filename, load_3D=True)
 
         self.load_3D = True
+
+    def add_set(self):
+        if self._deleting:
+            while len(self.strokes) > 0:
+                self.remove_stroke(delete_points=False)
+            for pt in self.current_point_set.pop():
+                self.cellpix[self.currentZ][pt[1], pt[2]] = 0
+                self.layerz[pt[1], pt[2]] = [0, 0, 0, 0]
+
+            self._deleting = False
+            self.layer.setCursor(QtCore.Qt.ArrowCursor)
+            self.update_plot()
+            self.update_layer()
+        else:
+            super().add_set()
 
     def add_mask(self, points=None, color=(100, 200, 50), dense=True):
         # points is list of strokes
@@ -571,6 +588,9 @@ class MainW_3d(MainW):
                         self.MCheckBox.toggle()
                     if event.key() == QtCore.Qt.Key_Z:
                         self.OCheckBox.toggle()
+                    if event.key() == QtCore.Qt.Key_E:
+                        self._deleting = True
+                        self.layer.setCursor(QtCore.Qt.ForbiddenCursor)
                     if event.key() == QtCore.Qt.Key_Left or event.key(
                     ) == QtCore.Qt.Key_A:
                         self.currentZ = max(0, self.currentZ - 1)
