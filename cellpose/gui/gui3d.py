@@ -116,6 +116,24 @@ def run(image=None):
     sys.exit(ret)
 
 
+def strokes_to_mask(cols, rows):
+    # get points inside drawn points
+    mask = np.zeros((np.ptp(rows) + 4, np.ptp(cols) + 4), "uint8")
+    pts = np.stack(
+        (cols - cols.min() + 2, rows - rows.min() + 2), axis=-1
+    )[:, np.newaxis, :]
+    mask = cv2.fillPoly(mask, [pts], (255, 0, 0))
+    ar, ac = np.nonzero(mask)
+    ar, ac = ar + rows.min() - 2, ac + cols.min() - 2
+    # get dense outline
+    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    pvc, pvr = contours[-2][0].squeeze().T
+    rows, cols = pvr + rows.min() - 2, pvc + cols.min() - 2
+    # concatenate all points
+    ar, ac = np.hstack((np.vstack((rows, cols)), np.vstack((ar, ac))))
+    return ac, ar
+
+
 class MainW_3d(MainW):
 
     def __init__(self, image=None, logger=None):
@@ -227,9 +245,12 @@ class MainW_3d(MainW):
         if self._deleting:
             while len(self.strokes) > 0:
                 self.remove_stroke(delete_points=False)
-            for pt in self.current_point_set.pop():
-                self.cellpix[self.currentZ][pt[1], pt[2]] = 0
-                self.layerz[pt[1], pt[2]] = [0, 0, 0, 0]
+            stroke = np.concatenate(self.current_point_set.pop(), axis=0).reshape(-1, 4)
+            vr = stroke[:, 2]
+            vc = stroke[:, 1]
+            ar, ac = strokes_to_mask(vc, vr)
+            self.cellpix[self.currentZ][ar, ac] = 0
+            self.layerz[ar, ac] = [0, 0, 0, 0]
 
             self._deleting = False
             self.layer.setCursor(QtCore.Qt.ArrowCursor)
@@ -260,20 +281,7 @@ class MainW_3d(MainW):
                 vr = stroke[iz, 1]
                 vc = stroke[iz, 2]
                 if iz.sum() > 0:
-                    # get points inside drawn points
-                    mask = np.zeros((np.ptp(vr) + 4, np.ptp(vc) + 4), "uint8")
-                    pts = np.stack((vc - vc.min() + 2, vr - vr.min() + 2),
-                                   axis=-1)[:, np.newaxis, :]
-                    mask = cv2.fillPoly(mask, [pts], (255, 0, 0))
-                    ar, ac = np.nonzero(mask)
-                    ar, ac = ar + vr.min() - 2, ac + vc.min() - 2
-                    # get dense outline
-                    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL,
-                                                cv2.CHAIN_APPROX_NONE)
-                    pvc, pvr = contours[-2][0].squeeze().T
-                    vr, vc = pvr + vr.min() - 2, pvc + vc.min() - 2
-                    # concatenate all points
-                    ar, ac = np.hstack((np.vstack((vr, vc)), np.vstack((ar, ac))))
+                    ac, ar = strokes_to_mask(vc, vr)
                     # if these pixels are overlapping with another cell, reassign them
                     ioverlap = self.cellpix[z][ar, ac] > 0
                     if (~ioverlap).sum() < 8:
