@@ -242,7 +242,7 @@ class MainW_3d(MainW):
                     # if these pixels are overlapping with another cell, reassign them
                     ioverlap = self.cellpix[z][ar, ac] > 0
                     if (~ioverlap).sum() < 8:
-                        print("ERROR: cell too small without overlaps, not drawn")
+                        print("ERROR: cell too small (excluding overlaps); not drawn")
                         return None
                     elif ioverlap.sum() > 0:
                         ar, ac = ar[~ioverlap], ac[~ioverlap]
@@ -638,6 +638,7 @@ class MainW_3d(MainW):
             selected = self.cellpix[z] == self.selected
             if np.any(selected):
                 self.cellpix[self.currentZ][selected] = self.selected
+                self.outpix[self.currentZ][selected] = self.selected
                 break
 
     def update_ztext(self):

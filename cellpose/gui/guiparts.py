@@ -409,6 +409,7 @@ class ImageDraw(pg.ImageItem):
         self.removable = False
 
         self.parent = parent
+        self.scatter = None
         #kernel[1,1] = 1
         self.setDrawKernel(kernel_size=self.parent.brush_size)
         self.parent.current_stroke = []
@@ -474,6 +475,8 @@ class ImageDraw(pg.ImageItem):
             #ev.acceptClicks(QtCore.Qt.LeftButton)
 
     def create_start(self, pos):
+        if self.scatter is not None:
+            self.parent.p0.removeItem(self.scatter)
         self.scatter = pg.ScatterPlotItem([pos.x()], [pos.y()], pxMode=False,
                                           pen=pg.mkPen(color=(255, 0, 0),
                                                        width=self.parent.brush_size),
@@ -504,7 +507,6 @@ class ImageDraw(pg.ImageItem):
                 return False
 
     def end_stroke(self):
-        self.parent.p0.removeItem(self.scatter)
         if not self.parent.stroke_appended:
             self.parent.strokes.append(self.parent.current_stroke)
             self.parent.stroke_appended = True
@@ -519,6 +521,8 @@ class ImageDraw(pg.ImageItem):
                 self.parent.current_point_set[0]) > 0 and self.parent.autosave:
             self.parent.add_set()
         self.parent.in_stroke = False
+        self.parent.p0.removeItem(self.scatter)
+        self.scatter = None
 
     def tabletEvent(self, ev):
         pass
