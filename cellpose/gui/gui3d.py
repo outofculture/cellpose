@@ -556,8 +556,8 @@ class MainW_3d(MainW):
                     if event.key() == QtCore.Qt.Key_E:
                         self._deleting = True
                         # <a target="_blank" href="https://icons8.com/icon/Rne44Nms3ypb/erase">Erase</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
-                    self.layer.setCursor(QtGui.QCursor(
-                        QtGui.QPixmap(os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons", "erase.png"))))
+                        self.layer.setCursor(QtGui.QCursor(
+                            QtGui.QPixmap(os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons", "erase.png"))))
                     if event.key() == QtCore.Qt.Key_C and self.selected > 0:
                         self._addToExisting = True
                         # <a target="_blank" href="https://icons8.com/icon/84991/add">Add</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
