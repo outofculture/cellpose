@@ -1315,6 +1315,8 @@ class MainW(QMainWindow):
             self.layerz[self.cellpix[z] == idx] = np.array(
                 [255, 255, 255, self.opacity])
             self.update_layer()
+        else:
+            self._addToExisting = False
 
     def select_cell_multi(self, idx):
         if idx > 0:
