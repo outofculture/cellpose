@@ -3,24 +3,18 @@ Copyright © 2023 Howard Hughes Medical Institute, Authored by Carsen Stringer a
 """
 from itertools import zip_longest
 
-import sys, os, pathlib, warnings, datetime, time
+import sys, pathlib, warnings
 
 from qtpy import QtGui, QtCore
-from superqt import QRangeSlider
-from qtpy.QtWidgets import QScrollArea, QMainWindow, QApplication, QWidget, QScrollBar, QComboBox, QGridLayout, QPushButton, QFrame, QCheckBox, QLabel, QProgressBar, QLineEdit, QMessageBox, QGroupBox
+from qtpy.QtWidgets import QApplication, QScrollBar, QCheckBox, QLabel, QLineEdit
 import pyqtgraph as pg
 
 import numpy as np
-from scipy.stats import mode
 import cv2
 
-from . import guiparts, menus, io
-from .. import models, core, dynamics, version
-from ..utils import download_url_to_file, masks_to_outlines, diameters
-from ..io import get_image_files, imsave, imread
-from ..transforms import resize_image, normalize99  #fixed import
-from ..plot import disk
-from ..transforms import normalize99_tile, smooth_sharpen_img
+from . import guiparts, io
+from .guiparts import strokes_to_mask
+from ..utils import download_url_to_file, masks_to_outlines
 from .gui import MainW
 
 try:
@@ -117,31 +111,11 @@ def run(image=None):
     sys.exit(ret)
 
 
-def strokes_to_mask(cols, rows):
-    # get points inside drawn points
-    mask = np.zeros((np.ptp(rows) + 4, np.ptp(cols) + 4), "uint8")
-    pts = np.stack(
-        (cols - cols.min() + 2, rows - rows.min() + 2), axis=-1
-    )[:, np.newaxis, :]
-    mask = cv2.fillPoly(mask, [pts], (255, 0, 0))
-    ar, ac = np.nonzero(mask)
-    ar, ac = ar + rows.min() - 2, ac + cols.min() - 2
-    # get dense outline
-    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    pvc, pvr = contours[-2][0].squeeze().T
-    rows, cols = pvr + rows.min() - 2, pvc + cols.min() - 2
-    # concatenate all points
-    ar, ac = np.hstack((np.vstack((rows, cols)), np.vstack((ar, ac))))
-    return ac, ar
-
-
 class MainW_3d(MainW):
 
     def __init__(self, image=None, logger=None):
         # MainW init
         MainW.__init__(self, image=image, logger=logger)
-
-        self._deleting = False
 
         # add gradZ view
         self.ViewDropDown.insertItem(3, "gradZ")
@@ -242,25 +216,7 @@ class MainW_3d(MainW):
 
         self.load_3D = True
 
-    def add_set(self):
-        if self._deleting:
-            while len(self.strokes) > 0:
-                self.remove_stroke(delete_points=False)
-            stroke = np.concatenate(self.current_point_set.pop(), axis=0).reshape(-1, 4)
-            vr = stroke[:, 2]
-            vc = stroke[:, 1]
-            ar, ac = strokes_to_mask(vc, vr)
-            self.cellpix[self.currentZ][ar, ac] = 0
-            self.layerz[ar, ac] = [0, 0, 0, 0]
-
-            self._deleting = False
-            self.layer.setCursor(QtCore.Qt.ArrowCursor)
-            self.update_plot()
-            self.update_layer()
-        else:
-            super().add_set()
-
-    def add_mask(self, points=None, color=(100, 200, 50), dense=True):
+    def add_mask(self, points=None, color=(100, 200, 50), dense=True, idx=None):
         # points is list of strokes
 
         points_all = np.concatenate(points, axis=0)
@@ -286,7 +242,7 @@ class MainW_3d(MainW):
                     # if these pixels are overlapping with another cell, reassign them
                     ioverlap = self.cellpix[z][ar, ac] > 0
                     if (~ioverlap).sum() < 8:
-                        print("ERROR: cell too small without overlaps, not drawn")
+                        print("ERROR: cell too small (excluding overlaps); not drawn")
                         return None
                     elif ioverlap.sum() > 0:
                         ar, ac = ar[~ioverlap], ac[~ioverlap]
@@ -301,7 +257,7 @@ class MainW_3d(MainW):
                     acs = np.concatenate((acs, ac), axis=0)
                     vrs = np.concatenate((vrs, vr), axis=0)
                     vcs = np.concatenate((vcs, vc), axis=0)
-            self.draw_mask(z, ars, acs, vrs, vcs, color)
+            self.draw_mask(z, ars, acs, vrs, vcs, color, idx)
 
             median.append(np.array([np.median(ars), np.median(acs)]))
             mall[z - zmin, ars, acs] = True
@@ -327,7 +283,7 @@ class MainW_3d(MainW):
                 vr, vc = np.nonzero(outlines)
                 vr, vc = vr + ymin, vc + xmin
                 ar, ac = ar + ymin, ac + xmin
-                self.draw_mask(z + zmin, ar, ac, vr, vc, color)
+                self.draw_mask(z + zmin, ar, ac, vr, vc, color, idx)
 
         self.zdraw.append(zdraw)
 
@@ -600,6 +556,9 @@ class MainW_3d(MainW):
                     if event.key() == QtCore.Qt.Key_E:
                         self._deleting = True
                         self.layer.setCursor(QtCore.Qt.ForbiddenCursor)
+                    if event.key() == QtCore.Qt.Key_C and self.selected > 0:
+                        self._addToExisting = True
+                        self.layer.setCursor(QtCore.Qt.ArrowCursor)
                     if event.key() == QtCore.Qt.Key_Left or event.key(
                     ) == QtCore.Qt.Key_A:
                         self.currentZ = max(0, self.currentZ - 1)
@@ -679,6 +638,7 @@ class MainW_3d(MainW):
             selected = self.cellpix[z] == self.selected
             if np.any(selected):
                 self.cellpix[self.currentZ][selected] = self.selected
+                self.outpix[self.currentZ][selected] = self.selected
                 break
 
     def update_ztext(self):

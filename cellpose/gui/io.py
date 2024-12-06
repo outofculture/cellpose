@@ -506,7 +506,7 @@ def _masks_to_gui(parent, masks, outlines=None, colors=None):
         parent.outpix = np.zeros_like(parent.cellpix)
         if parent.restore and "upsample" in parent.restore:
             parent.outpix_orig = np.zeros_like(parent.cellpix_orig)
-        for z in range(parent.NZ):
+        for z in range(parent.NZ - 1):
             outlines = masks_to_outlines(parent.cellpix[z])
             parent.outpix[z] = outlines * parent.cellpix[z]
             if parent.restore and "upsample" in parent.restore:
@@ -524,7 +524,7 @@ def _masks_to_gui(parent, masks, outlines=None, colors=None):
         if parent.restore and "upsample" in parent.restore:
             parent.outpix_resize = parent.outpix.copy()
             parent.outpix_orig = np.zeros_like(parent.cellpix_orig)
-            for z in range(parent.NZ):
+            for z in range(parent.NZ - 1):
                 outlines = masks_to_outlines(parent.cellpix_orig[z])
                 parent.outpix_orig[z] = outlines * parent.cellpix_orig[z]
                 if z % 50 == 0 and parent.NZ > 1:
