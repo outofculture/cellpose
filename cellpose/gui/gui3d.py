@@ -1,21 +1,21 @@
 """
 Copyright © 2023 Howard Hughes Medical Institute, Authored by Carsen Stringer and Marius Pachitariu.
 """
+import cv2
+import numpy as np
+import os
+import pathlib
+import pyqtgraph as pg
+import sys
+import warnings
 from itertools import zip_longest
-
-import sys, pathlib, warnings
-
 from qtpy import QtGui, QtCore
 from qtpy.QtWidgets import QApplication, QScrollBar, QCheckBox, QLabel, QLineEdit
-import pyqtgraph as pg
-
-import numpy as np
-import cv2
 
 from . import guiparts, io
+from .gui import MainW
 from .guiparts import strokes_to_mask
 from ..utils import download_url_to_file, masks_to_outlines
-from .gui import MainW
 
 try:
     import matplotlib.pyplot as plt
@@ -555,10 +555,14 @@ class MainW_3d(MainW):
                         self.OCheckBox.toggle()
                     if event.key() == QtCore.Qt.Key_E:
                         self._deleting = True
-                        self.layer.setCursor(QtCore.Qt.ForbiddenCursor)
+                        # <a target="_blank" href="https://icons8.com/icon/Rne44Nms3ypb/erase">Erase</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+                    self.layer.setCursor(QtGui.QCursor(
+                        QtGui.QPixmap(os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons", "erase.png"))))
                     if event.key() == QtCore.Qt.Key_C and self.selected > 0:
                         self._addToExisting = True
-                        self.layer.setCursor(QtCore.Qt.ArrowCursor)
+                        # <a target="_blank" href="https://icons8.com/icon/84991/add">Add</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+                        self.layer.setCursor(QtGui.QCursor(
+                            QtGui.QPixmap(os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons", "add.png"))))
                     if event.key() == QtCore.Qt.Key_Left or event.key(
                     ) == QtCore.Qt.Key_A:
                         self.currentZ = max(0, self.currentZ - 1)
