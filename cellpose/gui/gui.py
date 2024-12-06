@@ -2,24 +2,27 @@
 Copyright © 2023 Howard Hughes Medical Institute, Authored by Carsen Stringer and Marius Pachitariu.
 """
 
-import sys, os, pathlib, warnings, datetime, time, copy
-
-from qtpy import QtGui, QtCore
-from superqt import QRangeSlider, QCollapsible
-from qtpy.QtWidgets import QScrollArea, QMainWindow, QApplication, QWidget, QScrollBar, QComboBox, QGridLayout, QPushButton, QFrame, QCheckBox, QLabel, QProgressBar, QLineEdit, QMessageBox, QGroupBox
-import pyqtgraph as pg
-
-import numpy as np
-from scipy.stats import mode
+import copy
 import cv2
+import datetime
+import numpy as np
+import os
+import pathlib
+import pyqtgraph as pg
+import sys
+import time
+import warnings
+from qtpy import QtGui, QtCore
+from qtpy.QtWidgets import QScrollArea, QMainWindow, QApplication, QWidget, QComboBox, QGridLayout, QPushButton, QFrame, \
+    QCheckBox, QLabel, QProgressBar, QLineEdit, QGroupBox
+from superqt import QRangeSlider, QCollapsible
 
 from . import guiparts, menus, io
 from .. import models, core, dynamics, version, denoise, train
-from ..utils import download_url_to_file, masks_to_outlines, diameters
-from ..io import get_image_files, imsave, imread
-from ..transforms import resize_image, normalize99, normalize99_tile, smooth_sharpen_img
-from ..models import normalize_default
+from ..io import get_image_files
 from ..plot import disk
+from ..transforms import resize_image, normalize99, normalize99_tile, smooth_sharpen_img
+from ..utils import download_url_to_file, masks_to_outlines
 
 try:
     import matplotlib.pyplot as plt

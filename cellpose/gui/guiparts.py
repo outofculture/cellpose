@@ -1,15 +1,15 @@
 """
 Copyright © 2023 Howard Hughes Medical Institute, Authored by Carsen Stringer and Marius Pachitariu.
 """
-
-from qtpy import QtGui, QtCore, QtWidgets
-from qtpy.QtGui import QPainter, QPixmap
-from qtpy.QtWidgets import QApplication, QRadioButton, QWidget, QDialog, QButtonGroup, QSlider, QStyle, QStyleOptionSlider, QGridLayout, QPushButton, QLabel, QLineEdit, QDialogButtonBox, QComboBox, QCheckBox
-import pyqtgraph as pg
-from pyqtgraph import functions as fn
-from pyqtgraph import Point
+import cv2
 import numpy as np
-import pathlib, os
+import os
+import pathlib
+import pyqtgraph as pg
+from qtpy import QtGui, QtCore
+from qtpy.QtGui import QPixmap
+from qtpy.QtWidgets import QWidget, QDialog, QGridLayout, QPushButton, QLabel, QLineEdit, QDialogButtonBox, QComboBox, \
+    QCheckBox
 
 
 def stylesheet():
@@ -583,3 +583,21 @@ class ImageDraw(pg.ImageItem):
         opamask = 100 * kernel[:, :, np.newaxis]
         self.redmask = np.concatenate((onmask, offmask, offmask, onmask), axis=-1)
         self.strokemask = np.concatenate((onmask, offmask, onmask, opamask), axis=-1)
+
+
+def strokes_to_mask(cols, rows):
+    # get points inside drawn points
+    mask = np.zeros((np.ptp(rows) + 4, np.ptp(cols) + 4), "uint8")
+    pts = np.stack(
+        (cols - cols.min() + 2, rows - rows.min() + 2), axis=-1
+    )[:, np.newaxis, :]
+    mask = cv2.fillPoly(mask, [pts], (255, 0, 0))
+    ar, ac = np.nonzero(mask)
+    ar, ac = ar + rows.min() - 2, ac + cols.min() - 2
+    # get dense outline
+    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    pvc, pvr = contours[-2][0].squeeze().T
+    rows, cols = pvr + rows.min() - 2, pvc + cols.min() - 2
+    # concatenate all points
+    ar, ac = np.hstack((np.vstack((rows, cols)), np.vstack((ar, ac))))
+    return ac, ar

@@ -3,24 +3,18 @@ Copyright © 2023 Howard Hughes Medical Institute, Authored by Carsen Stringer a
 """
 from itertools import zip_longest
 
-import sys, os, pathlib, warnings, datetime, time
+import sys, pathlib, warnings
 
 from qtpy import QtGui, QtCore
-from superqt import QRangeSlider
-from qtpy.QtWidgets import QScrollArea, QMainWindow, QApplication, QWidget, QScrollBar, QComboBox, QGridLayout, QPushButton, QFrame, QCheckBox, QLabel, QProgressBar, QLineEdit, QMessageBox, QGroupBox
+from qtpy.QtWidgets import QApplication, QScrollBar, QCheckBox, QLabel, QLineEdit
 import pyqtgraph as pg
 
 import numpy as np
-from scipy.stats import mode
 import cv2
 
-from . import guiparts, menus, io
-from .. import models, core, dynamics, version
-from ..utils import download_url_to_file, masks_to_outlines, diameters
-from ..io import get_image_files, imsave, imread
-from ..transforms import resize_image, normalize99  #fixed import
-from ..plot import disk
-from ..transforms import normalize99_tile, smooth_sharpen_img
+from . import guiparts, io
+from .guiparts import strokes_to_mask
+from ..utils import download_url_to_file, masks_to_outlines
 from .gui import MainW
 
 try:
@@ -115,24 +109,6 @@ def run(image=None):
     MainW_3d(image=image, logger=logger)
     ret = app.exec_()
     sys.exit(ret)
-
-
-def strokes_to_mask(cols, rows):
-    # get points inside drawn points
-    mask = np.zeros((np.ptp(rows) + 4, np.ptp(cols) + 4), "uint8")
-    pts = np.stack(
-        (cols - cols.min() + 2, rows - rows.min() + 2), axis=-1
-    )[:, np.newaxis, :]
-    mask = cv2.fillPoly(mask, [pts], (255, 0, 0))
-    ar, ac = np.nonzero(mask)
-    ar, ac = ar + rows.min() - 2, ac + cols.min() - 2
-    # get dense outline
-    contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    pvc, pvr = contours[-2][0].squeeze().T
-    rows, cols = pvr + rows.min() - 2, pvc + cols.min() - 2
-    # concatenate all points
-    ar, ac = np.hstack((np.vstack((rows, cols)), np.vstack((ar, ac))))
-    return ac, ar
 
 
 class MainW_3d(MainW):
