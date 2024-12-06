@@ -117,8 +117,6 @@ class MainW_3d(MainW):
         # MainW init
         MainW.__init__(self, image=image, logger=logger)
 
-        self._deleting = False
-
         # add gradZ view
         self.ViewDropDown.insertItem(3, "gradZ")
 
@@ -218,25 +216,7 @@ class MainW_3d(MainW):
 
         self.load_3D = True
 
-    def add_set(self):
-        if self._deleting:
-            while len(self.strokes) > 0:
-                self.remove_stroke(delete_points=False)
-            stroke = np.concatenate(self.current_point_set.pop(), axis=0).reshape(-1, 4)
-            vr = stroke[:, 2]
-            vc = stroke[:, 1]
-            ar, ac = strokes_to_mask(vc, vr)
-            self.cellpix[self.currentZ][ar, ac] = 0
-            self.layerz[ar, ac] = [0, 0, 0, 0]
-
-            self._deleting = False
-            self.layer.setCursor(QtCore.Qt.ArrowCursor)
-            self.update_plot()
-            self.update_layer()
-        else:
-            super().add_set()
-
-    def add_mask(self, points=None, color=(100, 200, 50), dense=True):
+    def add_mask(self, points=None, color=(100, 200, 50), dense=True, idx=None):
         # points is list of strokes
 
         points_all = np.concatenate(points, axis=0)
@@ -277,7 +257,7 @@ class MainW_3d(MainW):
                     acs = np.concatenate((acs, ac), axis=0)
                     vrs = np.concatenate((vrs, vr), axis=0)
                     vcs = np.concatenate((vcs, vc), axis=0)
-            self.draw_mask(z, ars, acs, vrs, vcs, color)
+            self.draw_mask(z, ars, acs, vrs, vcs, color, idx)
 
             median.append(np.array([np.median(ars), np.median(acs)]))
             mall[z - zmin, ars, acs] = True
@@ -303,7 +283,7 @@ class MainW_3d(MainW):
                 vr, vc = np.nonzero(outlines)
                 vr, vc = vr + ymin, vc + xmin
                 ar, ac = ar + ymin, ac + xmin
-                self.draw_mask(z + zmin, ar, ac, vr, vc, color)
+                self.draw_mask(z + zmin, ar, ac, vr, vc, color, idx)
 
         self.zdraw.append(zdraw)
 
@@ -576,6 +556,9 @@ class MainW_3d(MainW):
                     if event.key() == QtCore.Qt.Key_E:
                         self._deleting = True
                         self.layer.setCursor(QtCore.Qt.ForbiddenCursor)
+                    if event.key() == QtCore.Qt.Key_C and self.selected > 0:
+                        self._addToExisting = True
+                        self.layer.setCursor(QtCore.Qt.ArrowCursor)
                     if event.key() == QtCore.Qt.Key_Left or event.key(
                     ) == QtCore.Qt.Key_A:
                         self.currentZ = max(0, self.currentZ - 1)

@@ -189,6 +189,8 @@ class MainW(QMainWindow):
     def __init__(self, image=None, logger=None):
         super(MainW, self).__init__()
 
+        self._deleting = False
+        self._addToExisting = False
         self.logger = logger
         pg.setConfigOptions(imageAxisOrder="row-major")
         self.setGeometry(50, 50, 1200, 1000)
@@ -883,6 +885,12 @@ class MainW(QMainWindow):
                         self.MCheckBox.toggle()
                     if event.key() == QtCore.Qt.Key_Z:
                         self.OCheckBox.toggle()
+                    if event.key() == QtCore.Qt.Key_E:
+                        self._deleting = True
+                        self.layer.setCursor(QtCore.Qt.ForbiddenCursor)
+                    if event.key() == QtCore.Qt.Key_C and self.selected > 0:
+                        self._addToExisting = True
+                        self.layer.setCursor(QtCore.Qt.ArrowCursor)
                     if event.key() == QtCore.Qt.Key_Left or event.key(
                     ) == QtCore.Qt.Key_A:
                         self.get_prev_image()
@@ -1682,28 +1690,45 @@ class MainW(QMainWindow):
         self.roi_count.setText(f"{self.ncells} ROIs")
 
     def add_set(self):
-        if len(self.current_point_set) > 0:
+        if self._deleting:
+            while len(self.strokes) > 0:
+                self.remove_stroke(delete_points=False)
+            stroke = np.concatenate(self.current_point_set.pop(), axis=0).reshape(-1, 4)
+            vr = stroke[:, 2]
+            vc = stroke[:, 1]
+            ar, ac = guiparts.strokes_to_mask(vc, vr)
+            self.cellpix[self.currentZ][ar, ac] = 0
+            self.outpix[self.currentZ][ar, ac] = 0
+            self.layerz[ar, ac] = [0, 0, 0, 0]
+            self._deleting = False
+        elif len(self.current_point_set) > 0:
+            idx = self.selected if self._addToExisting else None
             while len(self.strokes) > 0:
                 self.remove_stroke(delete_points=False)
             if len(self.current_point_set[0]) > 8:
-                color = self.colormap[self.ncells, :3]
-                median = self.add_mask(points=self.current_point_set, color=color)
+                color = [255, 255, 255] if idx else self.colormap[self.ncells, :3]
+                median = self.add_mask(points=self.current_point_set, color=color, idx=idx)
                 if median is not None:
                     self.removed_cell = []
                     self.toggle_mask_ops()
-                    self.cellcolors = np.append(self.cellcolors, color[np.newaxis, :],
-                                                axis=0)
-                    self.ncells += 1
+                    if idx is None:
+                        self.cellcolors = np.append(
+                            self.cellcolors, color[np.newaxis, :], axis=0)
+                        self.ncells += 1
                     self.ismanual = np.append(self.ismanual, True)
                     if self.NZ == 1:
                         # only save after each cell if single image
                         io._save_sets_with_check(self)
-            self.current_stroke = []
-            self.strokes = []
-            self.current_point_set = []
-            self.update_layer()
 
-    def add_mask(self, points=None, color=(100, 200, 50), dense=True):
+        self.layer.setCursor(QtCore.Qt.CrossCursor)
+        self.current_stroke = []
+        self._addToExisting = False
+        self.strokes = []
+        self.current_point_set = []
+        self.update_plot()
+        self.update_layer()
+
+    def add_mask(self, points=None, color=(100, 200, 50), dense=True, idx=None):
         # points is list of strokes
         points_all = np.concatenate(points, axis=0)
 
@@ -1749,7 +1774,7 @@ class MainW(QMainWindow):
             vrs = np.concatenate((vrs, vr), axis=0)
             vcs = np.concatenate((vcs, vc), axis=0)
 
-        self.draw_mask(z, ars, acs, vrs, vcs, color)
+        self.draw_mask(z, ars, acs, vrs, vcs, color, idx)
         median.append(np.array([np.median(ars), np.median(acs)]))
 
         self.zdraw.append(zdraw)
