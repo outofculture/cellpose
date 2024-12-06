@@ -887,10 +887,16 @@ class MainW(QMainWindow):
                         self.OCheckBox.toggle()
                     if event.key() == QtCore.Qt.Key_E:
                         self._deleting = True
-                        self.layer.setCursor(QtCore.Qt.ForbiddenCursor)
+                        # <a target="_blank" href="https://icons8.com/icon/Rne44Nms3ypb/erase">Erase</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+                        self.layer.setCursor(QtGui.QCursor(
+                            QtGui.QPixmap(
+                                os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons", "erase.png"))))
                     if event.key() == QtCore.Qt.Key_C and self.selected > 0:
                         self._addToExisting = True
-                        self.layer.setCursor(QtCore.Qt.ArrowCursor)
+                        # <a target="_blank" href="https://icons8.com/icon/84991/add">Add</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a>
+                        self.layer.setCursor(QtGui.QCursor(
+                            QtGui.QPixmap(
+                                os.path.join(os.path.dirname(os.path.dirname(__file__)), "icons", "add.png"))))
                     if event.key() == QtCore.Qt.Key_Left or event.key(
                     ) == QtCore.Qt.Key_A:
                         self.get_prev_image()
