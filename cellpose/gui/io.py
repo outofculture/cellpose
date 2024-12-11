@@ -78,14 +78,15 @@ def _get_train_set(image_names):
     for image_name_full in image_names:
         image_name = os.path.splitext(image_name_full)[0]
         label_name = None
-        if os.path.exists(image_name + "_seg.npy"):
-            dat = np.load(image_name + "_seg.npy", allow_pickle=True).item()
+        npy_name = f"{image_name}_seg.npy"
+        if os.path.exists(npy_name):
+            dat = np.load(npy_name, allow_pickle=True).item()
             masks = dat["masks"].squeeze()
-            if masks.ndim == 2:
+            if masks.ndim in (2, 3):
                 fastremap.renumber(masks, in_place=True)
-                label_name = image_name + "_seg.npy"
+                label_name = npy_name
             else:
-                print(f"GUI_INFO: _seg.npy found for {image_name} but masks.ndim!=2")
+                print(f"GUI_INFO: _seg.npy found for {image_name} but masks.ndim!=2,3")
             if "img_restore" in dat:
                 data = dat["img_restore"].squeeze()
                 restore = dat["restore"]

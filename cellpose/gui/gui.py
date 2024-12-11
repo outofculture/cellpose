@@ -2169,9 +2169,9 @@ class MainW(QMainWindow):
         return
 
     def new_model(self):
-        if self.NZ != 1:
-            print("ERROR: cannot train model on 3D data")
-            return
+        # if self.NZ != 1:
+        #     print("ERROR: cannot train model on 3D data")
+        #     return
 
         # train model
         image_names = self.get_files()[0]
@@ -2211,6 +2211,7 @@ class MainW(QMainWindow):
         self.new_model_path, train_losses = train.train_seg(
             self.model.net, train_data=self.train_data, train_labels=self.train_labels,
             channels=self.channels, normalize=normalize_params, min_train_masks=0,
+            do_3d=self.NZ > 1,
             save_path=save_path, nimg_per_epoch=max(8, len(self.train_data)), SGD=True,
             learning_rate=self.training_params["learning_rate"],
             weight_decay=self.training_params["weight_decay"],
