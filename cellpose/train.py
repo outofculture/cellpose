@@ -1,3 +1,5 @@
+from functools import reduce
+
 import time
 import os
 import numpy as np
@@ -155,6 +157,7 @@ def _process_train_test(train_data=None, train_labels=None, train_files=None,
                         test_labels=None, test_files=None, test_labels_files=None,
                         test_probs=None, load_files=True, min_train_masks=5,
                         compute_flows=False, channels=None, channel_axis=None,
+                        do_3d=False,
                         rgb=False, normalize_params={"normalize": False
                                                     }, device=None):
     """
@@ -215,6 +218,17 @@ def _process_train_test(train_data=None, train_labels=None, train_files=None,
         if load_files and nimg_test:
             test_data = [io.imread(test_files[i]) for i in trange(nimg_test)]
             test_labels = [io.imread(test_labels_files[i]) for i in trange(nimg_test)]
+
+    if do_3d:
+        # each image is a 3d stack; expand the list into its 2d slices
+        train_data = [img for stack in train_data for img in stack]
+        nimg = len(train_data)
+        train_labels = [lbl for stack in train_labels for lbl in stack]
+        if test_data is not None:
+            test_data = [img for stack in test_data for img in stack]
+            nimg_test = len(test_data)
+        if test_labels is not None:
+            test_labels = [lbl for stack in test_labels for lbl in stack]
 
     ### check that arrays are correct size
     if ((train_labels is not None and nimg != len(train_labels)) or
@@ -330,6 +344,7 @@ def train_seg(net, train_data=None, train_labels=None, train_files=None,
               train_labels_files=None, train_probs=None, test_data=None,
               test_labels=None, test_files=None, test_labels_files=None,
               test_probs=None, load_files=True, batch_size=8, learning_rate=0.005,
+              do_3d=False,
               n_epochs=2000, weight_decay=1e-5, momentum=0.9, SGD=False, channels=None,
               channel_axis=None, rgb=False, normalize=True, compute_flows=False,
               save_path=None, save_every=100, save_each=False, nimg_per_epoch=None,
@@ -397,6 +412,7 @@ def train_seg(net, train_data=None, train_labels=None, train_files=None,
                               load_files=load_files, min_train_masks=min_train_masks,
                               compute_flows=compute_flows, channels=channels,
                               channel_axis=channel_axis, rgb=rgb,
+                              do_3d=do_3d,
                               normalize_params=normalize_params, device=net.device)
     (train_data, train_labels, train_files, train_labels_files, train_probs, diam_train,
      test_data, test_labels, test_files, test_labels_files, test_probs, diam_test,
